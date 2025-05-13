@@ -25,20 +25,16 @@ export default function WeatherHeader({ city, temp_c, condition, maxtemp_c, mint
             tw`items-center`,
             isMini ? { marginTop: 30, marginBottom: 0 } : { marginTop: 32, marginBottom: 8 }
         ]}>
-            {!isMini && (
-                <View style={tw`flex-row justify-end w-full px-4`}>
-                    <TouchableOpacity onPress={() => router.push('/searchLocation' as any)}>
-                        <Ionicons name="add" size={28} color={COLORS.text.primary} />
-                    </TouchableOpacity>
-                </View>
-            )}
+
             <Text style={[tw`mb-1`, { color: COLORS.text.primary, fontSize: 32, fontWeight: 'medium' }]}>{city}</Text>
             {isMini ? (
-                <Text style={[{ color: COLORS.text.primary, fontSize, fontWeight: 'medium' }]}>{temp_c}° {condition}</Text>
+                <Text style={[{ color: COLORS.text.primary, fontSize, fontWeight: 'medium' }]}>
+                    {Math.round(temp_c)}° {condition}
+                </Text>
             ) : (
                 <>
-                    <Text style={[{ color: COLORS.text.primary, fontSize: tempFontSize, fontWeight: 'medium' }]}>{temp_c}°</Text>
-                    <Text style={[{ color: COLORS.text.secondary, fontSize: 16, fontWeight: '500' }]}>Cao: {maxtemp_c}°   Thấp: {mintemp_c}°</Text>
+                    <Text style={[{ color: COLORS.text.primary, fontSize: tempFontSize, fontWeight: 'medium' }]}>{Math.round(temp_c)}°</Text>
+                    <Text style={[{ color: COLORS.text.secondary, fontSize: 16, fontWeight: '500' }]}>Cao: {Math.round(maxtemp_c)}°   Thấp: {Math.round(mintemp_c)}°</Text>
                 </>
             )}
         </View>

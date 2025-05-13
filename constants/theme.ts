@@ -4,6 +4,7 @@ export const COLORS = {
     secondary: '#3A3A6A',
     background: '#48319D',
     card: 'rgba(255,255,255,0.08)',
+    backgroundCard: 'rgba(255,255,255,0.1)',
     text: {
         primary: '#FFFFFF',
         secondary: 'rgba(255,255,255,0.7)',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, Dimensions } from 'react-native';
+import { View, ScrollView, Dimensions, Text } from 'react-native';
 import { LineChart, BarChart } from 'react-native-chart-kit';
 import { COLORS } from '../../constants/theme';
 
@@ -23,7 +23,8 @@ export default function WeeklyCharts({ forecastday }: { forecastday: DayData[] }
     return (
         <View style={{ gap: 16 }}>
             {/* LineChart nhiệt độ */}
-            <View style={{ backgroundColor: COLORS.secondary, borderRadius: 20, padding: 8 }}>
+            <View style={{ backgroundColor: COLORS.backgroundCard, borderRadius: 20, padding: 8 }}>
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 8, paddingHorizontal: 8 }}>Nhiệt độ (°C)</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     <LineChart
                         data={{
@@ -36,10 +37,10 @@ export default function WeeklyCharts({ forecastday }: { forecastday: DayData[] }
                         chartConfig={{
                             backgroundGradientFrom: COLORS.secondary,
                             backgroundGradientTo: COLORS.secondary,
-                            color: () => '#e0aaff',
+                            color: () => '#ff9e00',
                             labelColor: () => '#fff',
                             propsForDots: { r: '4', strokeWidth: '2', stroke: '#fff' },
-                            propsForBackgroundLines: { stroke: 'rgba(255,255,255,0.08)' },
+                            propsForBackgroundLines: { stroke: 'rgba(255,255,255,0.2)' },
                             decimalPlaces: 0,
                         }}
                         bezier
@@ -48,7 +49,8 @@ export default function WeeklyCharts({ forecastday }: { forecastday: DayData[] }
                 </ScrollView>
             </View>
             {/* BarChart lượng mưa */}
-            <View style={{ backgroundColor: COLORS.secondary, borderRadius: 20, padding: 8 }}>
+            <View style={{ backgroundColor: COLORS.backgroundCard, borderRadius: 20, padding: 8 }}>
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 8, paddingHorizontal: 8 }}>Lượng mưa (mm)</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     <BarChart
                         data={{
@@ -62,9 +64,9 @@ export default function WeeklyCharts({ forecastday }: { forecastday: DayData[] }
                         chartConfig={{
                             backgroundGradientFrom: COLORS.secondary,
                             backgroundGradientTo: COLORS.secondary,
-                            color: () => '#e0aaff',
+                            color: () => '#4cc9f0',
                             labelColor: () => '#fff',
-                            propsForBackgroundLines: { stroke: 'rgba(255,255,255,0.08)' },
+                            propsForBackgroundLines: { stroke: 'rgba(255,255,255,0.2)' },
                             decimalPlaces: 0,
                         }}
                         style={{ borderRadius: 20 }}

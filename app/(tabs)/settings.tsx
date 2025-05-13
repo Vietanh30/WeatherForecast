@@ -112,17 +112,17 @@ export default function SettingsScreen() {
     };
 
     return (
-        <View style={{ flex: 1, backgroundColor: COLORS.secondary, paddingHorizontal: 16, paddingTop: 32 }}>
-            <Text style={{ color: COLORS.text.primary, fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 24 }}>Cài đặt</Text>
+        <View style={{ flex: 1, backgroundColor: COLORS.secondary }}>
+            <Text style={tw`text-white text-2xl font-bold text-center my-6`}>Cài đặt</Text>
             {settingsGroups.map((group, idx) => (
                 <View
                     key={idx}
                     style={{
                         backgroundColor: 'rgba(255,255,255,0.08)',
-                        borderRadius: 20,
+                        borderRadius: 12,
+                        marginHorizontal: 20,
                         marginBottom: 20,
-                        paddingVertical: 16,
-                        paddingHorizontal: 8,
+                        overflow: 'hidden',
                     }}
                 >
                     {group.map((item, i) => (
@@ -131,10 +131,10 @@ export default function SettingsScreen() {
                             style={{
                                 flexDirection: 'row',
                                 alignItems: 'center',
-                                paddingVertical: 14,
+                                paddingVertical: 20,
+                                paddingHorizontal: 20,
                                 borderBottomWidth: i < group.length - 1 ? 1 : 0,
                                 borderBottomColor: 'rgba(255,255,255,0.08)',
-                                padding: 10,
                             }}
                             onPress={() => {
                                 if ('route' in item && item.route) {
@@ -149,7 +149,7 @@ export default function SettingsScreen() {
                                 name={item.icon as any}
                                 size={22}
                                 color={'danger' in item && item.danger ? '#F984EE' : COLORS.icon.primary}
-                                style={{ marginRight: 16 }}
+                                style={{ marginRight: 20 }}
                             />
                             <Text
                                 style={{
