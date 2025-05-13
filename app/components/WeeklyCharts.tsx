@@ -4,21 +4,46 @@ import { LineChart, BarChart } from 'react-native-chart-kit';
 import { COLORS } from '../../constants/theme';
 
 interface DayData {
-    date: string;
-    day: {
-        maxtemp_c: number;
-        totalprecip_mm: number;
+    date: Date;
+    temp: number;
+    feels_like: number;
+    temp_min: number;
+    temp_max: number;
+    humidity: number;
+    weather: {
+        main: string;
+        description: string;
+        icon: string;
     };
+    wind: {
+        speed: number;
+        deg: number;
+    };
+    pop: number;
+    clouds: number;
+    visibility: number;
 }
 
 export default function WeeklyCharts({ forecastday }: { forecastday: DayData[] }) {
+    if (!forecastday || !Array.isArray(forecastday) || forecastday.length === 0) {
+        return (
+            <View style={{ gap: 16 }}>
+                <Text style={{ color: COLORS.text.secondary, textAlign: 'center' }}>
+                    Không có dữ liệu biểu đồ
+                </Text>
+            </View>
+        );
+    }
+
     const chartWidth = Dimensions.get('window').width - 40;
     const labels = forecastday.map(d => {
-        const date = new Date(d.date);
+        if (!d || !d.date) return '';
+        const date = d.date instanceof Date ? d.date : new Date(d.date);
         return `${date.getDate()}/${date.getMonth() + 1}`;
-    });
-    const tempData = forecastday.map(d => d.day.maxtemp_c);
-    const rainData = forecastday.map(d => d.day.totalprecip_mm);
+    }).filter(Boolean);
+
+    const tempData = forecastday.map(d => d?.temp || 0);
+    const rainData = forecastday.map(d => (d?.pop || 0) * 100); // Convert probability to percentage
 
     return (
         <View style={{ gap: 16 }}>
@@ -49,8 +74,8 @@ export default function WeeklyCharts({ forecastday }: { forecastday: DayData[] }
                 </ScrollView>
             </View>
             {/* BarChart lượng mưa */}
-            <View style={{ backgroundColor: COLORS.backgroundCard, borderRadius: 20, padding: 8 }}>
-                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 8, paddingHorizontal: 8 }}>Lượng mưa (mm)</Text>
+            <View style={{ backgroundColor: COLORS.backgroundCard, borderRadius: 20, padding: 8, marginBottom: 16 }}>
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 8, paddingHorizontal: 8 }}>Xác suất mưa (%)</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     <BarChart
                         data={{
@@ -60,7 +85,7 @@ export default function WeeklyCharts({ forecastday }: { forecastday: DayData[] }
                         width={chartWidth}
                         height={120}
                         yAxisLabel=""
-                        yAxisSuffix="mm"
+                        yAxisSuffix="%"
                         chartConfig={{
                             backgroundGradientFrom: COLORS.secondary,
                             backgroundGradientTo: COLORS.secondary,

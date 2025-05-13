@@ -229,6 +229,47 @@ export interface AirQualityResponse {
     };
 }
 
+export interface SevenDayForecastResponse {
+    message: string;
+    data: {
+        location: {
+            name: string;
+            country: string;
+            coord: {
+                lat: number;
+                lon: number;
+            };
+        };
+        forecast: Array<{
+            dt: number;
+            dt_txt: string;
+            main: {
+                temp: number;
+                feels_like: number;
+                temp_min: number;
+                temp_max: number;
+                humidity: number;
+            };
+            weather: Array<{
+                id?: number;
+                main: string;
+                description: string;
+                icon?: string;
+            }>;
+            wind: {
+                speed: number;
+                deg: number;
+            };
+            pop: number;
+            clouds: {
+                all: number;
+            };
+            visibility: number;
+        }>;
+        notice: string;
+    };
+}
+
 export const weatherApi = {
     getCurrentWeather: async (location: string, lat?: number, lon?: number): Promise<WeatherResponse> => {
         try {
@@ -252,7 +293,7 @@ export const weatherApi = {
             }
 
             const data = await response.json();
-            console.log('Current weather data received successfully');
+            // console.log('Current weather data received successfully');
             return data;
         } catch (error) {
             console.error('Current weather error details:', {
@@ -392,8 +433,8 @@ export const weatherApi = {
 
     getAirQuality: async (location: string, lat?: number, lon?: number): Promise<AirQualityResponse> => {
         try {
-            const locationParam = lat && lon ? `${lat},${lon}` : location;
-            const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.WEATHER.AIR_QUALITY}?location=${encodeURIComponent(locationParam)}&lang=vi`;
+            const locationParam = lat && lon ? `lat=${lat}&lon=${lon}` : `location=${encodeURIComponent(location)}`;
+            const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.WEATHER.AIR_QUALITY}?${locationParam}&lang=vi`;
 
             const response = await fetch(url);
 
@@ -408,6 +449,27 @@ export const weatherApi = {
         } catch (error) {
             console.error('Air quality error details:', error);
             throw new Error('Failed to fetch air quality data');
+        }
+    },
+
+    getSevenDayForecast: async (location: string, lat?: number, lon?: number): Promise<SevenDayForecastResponse> => {
+        try {
+            const locationParam = lat && lon ? `lat=${lat}&lon=${lon}` : `location=${encodeURIComponent(location)}`;
+            const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.WEATHER.FORECAST_7DAYS}?${locationParam}&lang=vi`;
+            console.log("url", url)
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('7-day forecast error response:', errorText);
+                throw new Error(`Failed to fetch 7-day forecast data: ${response.status} ${errorText}`);
+            }
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('7-day forecast error details:', error);
+            throw new Error('Failed to fetch 7-day forecast data');
         }
     }
 };

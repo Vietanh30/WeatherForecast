@@ -1,81 +1,148 @@
 import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, Dimensions } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import tw from 'tailwind-react-native-classnames';
-import { COLORS } from '../../constants/theme';
 
-interface WeeklyForecast {
-    date: string;
-    day: {
-        maxtemp_c: number;
-        mintemp_c: number;
-        daily_chance_of_rain: number;
-        condition: {
-            text: string;
-            icon: string;
-            code: number;
-        };
+interface WeeklyForecastItem {
+    date: Date;
+    temp: number;
+    feels_like: number;
+    temp_min: number;
+    temp_max: number;
+    humidity: number;
+    condition: {
+        text: string;
+        icon: string;
+        code: number;
     };
+    wind_kph: number;
+    wind_dir: number;
+    chance_of_rain: number;
+    clouds: number;
+    visibility: number;
 }
 
 interface Props {
-    data: WeeklyForecast[];
+    data: WeeklyForecastItem[];
 }
 
-const getWeatherIcon = (condition: string) => {
-    switch (condition.toLowerCase()) {
-        case 'sunny':
-            return 'weather-sunny';
-        case 'partly cloudy':
-            return 'weather-partly-cloudy';
-        case 'cloudy':
-            return 'weather-cloudy';
-        case 'light rain':
-            return 'weather-rainy';
-        case 'clear':
-            return 'weather-night';
-        default:
-            return 'weather-cloudy';
-    }
-};
-
 const WeeklyForecastList: React.FC<Props> = ({ data }) => {
+    const ITEM_WIDTH = 70;
+    const ITEM_SPACING = 12;
+
+    const getWeatherIcon = (condition: string) => {
+        switch (condition.toLowerCase()) {
+            case 'clear sky':
+                return 'weather-sunny';
+            case 'few clouds':
+            case 'scattered clouds':
+            case 'broken clouds':
+            case 'overcast clouds':
+                return 'weather-partly-cloudy';
+            case 'shower rain':
+            case 'rain':
+            case 'moderate rain':
+            case 'light rain':
+                return 'weather-rainy';
+            case 'thunderstorm':
+                return 'weather-lightning';
+            case 'snow':
+                return 'weather-snowy';
+            case 'mist':
+            case 'fog':
+                return 'weather-fog';
+            default:
+                return 'weather-cloudy';
+        }
+    };
+
+    const getDayLabel = (date: Date) => {
+        return date.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'numeric' });
+    };
+
+    const isCurrentDay = (date: Date) => {
+        const now = new Date();
+        return date.getDate() === now.getDate() &&
+            date.getMonth() === now.getMonth() &&
+            date.getFullYear() === now.getFullYear();
+    };
+
     return (
-        <View style={tw`mt-4`}>
-            <Text style={[tw`text-lg font-semibold mb-2`, { color: COLORS.text.primary }]}>Dự báo theo tuần</Text>
+        <View style={tw`my-2`}>
             <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={tw`pb-2`}
+                contentContainerStyle={tw`pb-2 px-2`}
+                decelerationRate="fast"
+                snapToInterval={ITEM_WIDTH + ITEM_SPACING}
+                snapToAlignment="start"
             >
-                {data.map((item, idx) => (
-                    <View
-                        key={idx}
-                        style={[
-                            tw`mr-4 items-center`,
-                            { minWidth: 72 },
-                            { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16, paddingVertical: 8 }
-                        ]}
-                    >
-                        <Text style={[tw`text-sm mb-1`, { color: COLORS.text.primary }]}>
-                            {new Date(item.date).toLocaleDateString('vi-VN', { weekday: 'short' })}
-                        </Text>
-                        <MaterialCommunityIcons
-                            name={getWeatherIcon(item.day.condition.text)}
-                            size={24}
-                            color={COLORS.icon.primary}
-                        />
-                        <Text style={[tw`text-lg font-semibold mt-1`, { color: COLORS.text.primary }]}>
-                            {item.day.maxtemp_c}°
-                        </Text>
-                        <Text style={[tw`text-xs mt-1`, { color: COLORS.text.secondary }]}>
-                            {item.day.mintemp_c}°
-                        </Text>
-                        <Text style={[tw`text-xs mt-1`, { color: COLORS.text.secondary }]}>
-                            {item.day.daily_chance_of_rain}%
-                        </Text>
-                    </View>
-                ))}
+                {data.map((item, idx) => {
+                    const isCurrent = isCurrentDay(item.date);
+                    return (
+                        <View
+                            key={idx}
+                            style={[
+                                tw`items-center`,
+                                {
+                                    width: ITEM_WIDTH,
+                                    marginRight: ITEM_SPACING,
+                                    borderWidth: isCurrent ? 2 : 0,
+                                    borderColor: '#fff',
+                                    backgroundColor: 'rgba(255,255,255,0.1)',
+                                    borderRadius: 16,
+                                    paddingVertical: 8,
+                                }
+                            ]}
+                        >
+                            <Text style={[
+                                tw`text-sm mb-2`,
+                                {
+                                    color: isCurrent ? '#fff' : 'rgba(255,255,255,0.7)',
+                                    fontWeight: isCurrent ? 'bold' : 'normal'
+                                }
+                            ]}>
+                                {getDayLabel(item.date)}
+                            </Text>
+                            <MaterialCommunityIcons
+                                name={getWeatherIcon(item.condition.text)}
+                                size={24}
+                                color={isCurrent ? '#fff' : 'rgba(255,255,255,0.7)'}
+                            />
+                            <Text style={[
+                                tw`text-lg font-semibold mt-2`,
+                                { color: isCurrent ? '#fff' : 'rgba(255,255,255,0.9)' }
+                            ]}>
+                                {Math.round(item.temp_max)}°
+                            </Text>
+                            <Text style={[
+                                tw`text-xs mt-1`,
+                                { color: isCurrent ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)' }
+                            ]}>
+                                {Math.round(item.temp_min)}°
+                            </Text>
+                            <Text style={[
+                                tw`text-xs mt-1`,
+                                { color: isCurrent ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)' }
+                            ]}>
+                                {Math.round(item.chance_of_rain * 100)}%
+                            </Text>
+                            <Text style={[
+                                tw`text-xs mt-1`,
+                                { color: isCurrent ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)' }
+                            ]}>
+                                {Math.round(item.wind_kph)} km/h
+                            </Text>
+                            <Text style={[
+                                tw`text-xs mt-1`,
+                                { color: isCurrent ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)' }
+                            ]}>
+                                {item.humidity}%
+                            </Text>
+                        </View>
+                    );
+                })}
             </ScrollView>
         </View>
     );

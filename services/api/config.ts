@@ -23,6 +23,7 @@ export const ENDPOINTS = {
     WEATHER: {
         CURRENT: '/weather/current',
         FORECAST: '/weather/forecast',
+        FORECAST_7DAYS: '/weather/forecast/7days',
         FUTURE: '/weather/future',
         MARINE: '/weather/marine',
         ASTRONOMY: '/weather/astronomy',

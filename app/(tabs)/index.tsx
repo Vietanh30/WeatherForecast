@@ -5,6 +5,7 @@ import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import WeatherHeader from '../../components/WeatherHeader';
 import ForecastTabs from '../../components/ForecastTabs';
 import ForecastList from '../components/ForecastList';
+import WeeklyForecastList from '../components/WeeklyForecastList';
 import FeatureCardsGrid from '../../components/FeatureCardsGrid';
 import { COLORS } from '../../constants/theme';
 import WeeklyCharts from '../components/WeeklyCharts';
@@ -136,8 +137,9 @@ export default function HomeScreen() {
       }
 
       // Then get forecast and astronomy using coordinates
-      const [forecast, astronomy] = await Promise.all([
-        weatherApi.getForecast(location, 7, currentWeatherData.location.lat, currentWeatherData.location.lon),
+      const [forecast, weeklyForecast, astronomy] = await Promise.all([
+        weatherApi.getForecast(location, 1, currentWeatherData.location.lat, currentWeatherData.location.lon),
+        weatherApi.getSevenDayForecast(location, parseFloat(await AsyncStorage.getItem('latitude') || '0'), parseFloat(await AsyncStorage.getItem('longitude') || '0')),
         weatherApi.getAstronomy(
           location,
           new Date().toISOString().split('T')[0],
@@ -145,13 +147,17 @@ export default function HomeScreen() {
           currentWeatherData.location.lon
         )
       ]);
-      console.log("forecast", forecast)
 
       const forecastData = forecast.data;
+      const weeklyForecastData = weeklyForecast.data;
       const astronomyData = astronomy.data;
 
       if (!forecastData || !forecastData.forecast || !forecastData.forecast.forecastday) {
         throw new Error('Invalid forecast data received');
+      }
+
+      if (!weeklyForecastData || !weeklyForecastData.forecast) {
+        throw new Error('Invalid weekly forecast data received');
       }
 
       if (!astronomyData || !astronomyData.astronomy) {
@@ -175,7 +181,7 @@ export default function HomeScreen() {
           longitude: currentWeatherData.location.lon,
           temperature: currentWeatherData.current.temp_c,
           feelsLike: currentWeatherData.current.feelslike_c,
-          description: currentWeatherData.current.condition.text,
+          description: currentWeatherData.current.condition?.text || 'Unknown',
           humidity: currentWeatherData.current.humidity,
           windSpeed: currentWeatherData.current.wind_kph,
           windDir: currentWeatherData.current.wind_dir,
@@ -214,37 +220,38 @@ export default function HomeScreen() {
           us_epa_index: currentWeatherData.current.air_quality?.['us-epa-index'] || 0,
           gb_defra_index: currentWeatherData.current.air_quality?.['gb-defra-index'] || 0
         },
-        forecast: forecastData.forecast.forecastday.map((day: any) => ({
-          city: displayCityName,
-          latitude: currentWeatherData.location.lat,
-          longitude: currentWeatherData.location.lon,
-          date: new Date(day.date_epoch * 1000),
-          maxtemp_c: day.day.maxtemp_c,
-          mintemp_c: day.day.mintemp_c,
-          avgtemp_c: day.day.avgtemp_c,
-          maxwind_kph: day.day.maxwind_kph,
-          totalprecip_mm: day.day.totalprecip_mm,
-          avghumidity: day.day.avghumidity,
-          condition_text: day.day.condition.text,
-          condition_icon: day.day.condition.icon,
-          condition_code: day.day.condition.code,
-          uv: day.day.uv,
-          daily_chance_of_rain: day.day.daily_chance_of_rain,
-          daily_chance_of_snow: day.day.daily_chance_of_snow,
-          astro: day.astro,
-          hour: day.hour.map((hour: any) => ({
-            time: new Date(hour.time_epoch * 1000),
-            temp_c: hour.temp_c,
-            condition_text: hour.condition.text,
-            condition_icon: hour.condition.icon,
-            condition_code: hour.condition.code,
-            wind_kph: hour.wind_kph,
-            humidity: hour.humidity,
-            feelslike_c: hour.feelslike_c,
-            chance_of_rain: hour.chance_of_rain,
-            chance_of_snow: hour.chance_of_snow,
-            air_quality: hour.air_quality
-          }))
+        hourlyForecast: forecastData.forecast.forecastday[0].hour.map((hour: any) => ({
+          time: new Date(hour.time_epoch * 1000),
+          temp_c: hour.temp_c,
+          condition: {
+            text: hour.condition?.text || 'Unknown',
+            icon: hour.condition?.icon || '',
+            code: hour.condition?.code || 0
+          },
+          wind_kph: hour.wind_kph || 0,
+          humidity: hour.humidity || 0,
+          feelslike_c: hour.feelslike_c || 0,
+          chance_of_rain: hour.chance_of_rain || 0,
+          chance_of_snow: hour.chance_of_snow || 0,
+          air_quality: hour.air_quality || {}
+        })),
+        weeklyForecast: weeklyForecastData.forecast.map((day: any) => ({
+          date: new Date(day.dt * 1000),
+          temp: day.main.temp,
+          feels_like: day.main.feels_like,
+          temp_min: day.main.temp_min,
+          temp_max: day.main.temp_max,
+          humidity: day.main.humidity,
+          condition: {
+            text: day.weather[0].description,
+            icon: day.weather[0].icon || '',
+            code: day.weather[0].id || 0
+          },
+          wind_kph: day.wind.speed,
+          wind_dir: day.wind.deg,
+          chance_of_rain: day.pop,
+          clouds: day.clouds.all,
+          visibility: day.visibility
         }))
       };
 
@@ -376,8 +383,8 @@ export default function HomeScreen() {
           city={weatherData.location.name}
           temp_c={weatherData.current.temperature}
           condition={weatherData.current.description}
-          maxtemp_c={weatherData.forecast[0].maxtemp_c}
-          mintemp_c={weatherData.forecast[0].mintemp_c}
+          maxtemp_c={weatherData.weeklyForecast[0].temp_max}
+          mintemp_c={weatherData.weeklyForecast[0].temp_min}
           isMini={isExpanded}
         />
 
@@ -414,20 +421,19 @@ export default function HomeScreen() {
 
             {tab === 'hourly' ? (
               <>
-                <ForecastList data={weatherData.forecast[0].hour} type="hourly" />
+                <ForecastList data={weatherData.hourlyForecast} />
                 {isExpanded && (
                   <View style={{ marginTop: 16 }}>
-
                     <FeatureCardsGrid data={featureCards} />
                   </View>
                 )}
               </>
             ) : (
               <>
-                <ForecastList data={weatherData.forecast} type="weekly" />
+                <WeeklyForecastList data={weatherData.weeklyForecast} />
                 {isExpanded && (
                   <View style={{ marginTop: 16 }}>
-                    <WeeklyCharts forecastday={weatherData.forecast} />
+                    <WeeklyCharts forecastday={weatherData.weeklyForecast} />
                   </View>
                 )}
               </>
