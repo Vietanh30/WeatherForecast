@@ -75,7 +75,28 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
+        name="notifications"
+        options={{
+          title: '',
+          tabBarIcon: ({ color, size }) => (
+            <View style={tw`items-center justify-center`}>
+              <Ionicons name="notifications-outline" size={24} color="white" />
+            </View>
+          ),
+        }}
+      />
+
+      <Tabs.Screen
         name="locationPreview"
+        options={{
+          tabBarStyle: { display: 'none' },
+          href: null,
+        }}
+
+      />
+
+      <Tabs.Screen
+        name="notification-detail"
         options={{
           tabBarStyle: { display: 'none' },
           href: null,
@@ -88,7 +109,6 @@ export default function TabLayout() {
           tabBarStyle: { display: 'none' },
           href: null,
         }}
-
       />
     </Tabs>
   );

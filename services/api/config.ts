@@ -4,7 +4,7 @@ import Constants from 'expo-constants';
 const extra = Constants.expoConfig?.extra || {};
 
 export const API_CONFIG = {
-    BASE_URL: 'http://192.168.1.198:8000/api',
+    BASE_URL: 'http://192.168.1.54:8000/api',
     GEOAPIFY_URL: 'https://api.geoapify.com/v1',
     API_KEYS: {
         WEATHER: extra.WEATHERAPI_KEY || 'YOUR_WEATHER_API_KEY',

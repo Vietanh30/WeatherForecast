@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Dimensions } from 'react-native';
+import { View, Text, Dimensions, Image } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import tw from 'tailwind-react-native-classnames';
@@ -28,34 +28,11 @@ interface Props {
 }
 
 const WeeklyForecastList: React.FC<Props> = ({ data }) => {
+    console.log(data);
     const ITEM_WIDTH = 70;
     const ITEM_SPACING = 12;
 
-    const getWeatherIcon = (condition: string) => {
-        switch (condition.toLowerCase()) {
-            case 'clear sky':
-                return 'weather-sunny';
-            case 'few clouds':
-            case 'scattered clouds':
-            case 'broken clouds':
-            case 'overcast clouds':
-                return 'weather-partly-cloudy';
-            case 'shower rain':
-            case 'rain':
-            case 'moderate rain':
-            case 'light rain':
-                return 'weather-rainy';
-            case 'thunderstorm':
-                return 'weather-lightning';
-            case 'snow':
-                return 'weather-snowy';
-            case 'mist':
-            case 'fog':
-                return 'weather-fog';
-            default:
-                return 'weather-cloudy';
-        }
-    };
+
 
     const getDayLabel = (date: Date) => {
         return date.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'numeric' });
@@ -105,11 +82,10 @@ const WeeklyForecastList: React.FC<Props> = ({ data }) => {
                             ]}>
                                 {getDayLabel(item.date)}
                             </Text>
-                            <MaterialCommunityIcons
-                                name={getWeatherIcon(item.condition.text)}
-                                size={24}
-                                color={isCurrent ? '#fff' : 'rgba(255,255,255,0.7)'}
-                            />
+                            <Image source={{
+                                uri: `http://openweathermap.org/img/wn/${item.condition.icon}@2x.png`
+                            }} style={{ width: 28, height: 28 }} />
+
                             <Text style={[
                                 tw`text-lg font-semibold mt-2`,
                                 { color: isCurrent ? '#fff' : 'rgba(255,255,255,0.9)' }
@@ -122,12 +98,12 @@ const WeeklyForecastList: React.FC<Props> = ({ data }) => {
                             ]}>
                                 {Math.round(item.temp_min)}°
                             </Text>
-                            <Text style={[
+                            {/* <Text style={[
                                 tw`text-xs mt-1`,
                                 { color: isCurrent ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)' }
                             ]}>
                                 {Math.round(item.chance_of_rain * 100)}%
-                            </Text>
+                            </Text> */}
                             <Text style={[
                                 tw`text-xs mt-1`,
                                 { color: isCurrent ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)' }

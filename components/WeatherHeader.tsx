@@ -14,6 +14,7 @@ interface WeatherHeaderProps {
     onSearch?: () => void;
     isMini?: boolean;
     conditionCode?: string | number;
+    feelslike_c: number;
 }
 
 export default function WeatherHeader({
@@ -22,6 +23,7 @@ export default function WeatherHeader({
     condition,
     maxtemp_c,
     mintemp_c,
+    feelslike_c,
     onSearch = () => { },
     isMini = false,
     conditionCode = '1000'
@@ -66,7 +68,7 @@ export default function WeatherHeader({
                 ) : (
                     <>
                         <Text style={[{ color: textColor, fontSize: tempFontSize, fontWeight: 'medium' }]}>{Math.round(temp_c)}°</Text>
-                        <Text style={[{ color: secondaryTextColor, fontSize: 16, fontWeight: '500' }]}>Cao: {Math.round(maxtemp_c)}°   Thấp: {Math.round(mintemp_c)}°</Text>
+                        <Text style={[{ color: secondaryTextColor, fontSize: 16, fontWeight: '500' }]}>{Math.round(maxtemp_c)}° /{Math.round(mintemp_c)}° Cảm giác như: {Math.round(feelslike_c)}°</Text>
                     </>
                 )}
             </View>

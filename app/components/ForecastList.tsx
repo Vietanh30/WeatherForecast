@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, Dimensions } from 'react-native';
+import { View, Text, Dimensions, Image } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import tw from 'tailwind-react-native-classnames';
@@ -88,23 +88,6 @@ const ForecastList: React.FC<Props> = ({ data }) => {
         }
     }, [data]);
 
-    const getWeatherIcon = (condition: string) => {
-        switch (condition.toLowerCase()) {
-            case 'sunny':
-                return 'weather-sunny';
-            case 'partly cloudy':
-                return 'weather-partly-cloudy';
-            case 'cloudy':
-                return 'weather-cloudy';
-            case 'light rain':
-                return 'weather-rainy';
-            case 'clear':
-                return 'weather-night';
-            default:
-                return 'weather-cloudy';
-        }
-    };
-
     const getTimeLabel = (time: string) => {
         const date = new Date(time);
         return `${date.getHours().toString().padStart(2, '0')}:00`;
@@ -156,11 +139,7 @@ const ForecastList: React.FC<Props> = ({ data }) => {
                             ]}>
                                 {getTimeLabel(item.time)}
                             </Text>
-                            <MaterialCommunityIcons
-                                name={getWeatherIcon(item.condition.text)}
-                                size={24}
-                                color={isCurrent ? '#fff' : 'rgba(255,255,255,0.7)'}
-                            />
+                            <Image source={{ uri: `https:${item.condition.icon}` }} style={{ width: 24, height: 24 }} />
                             <Text style={[
                                 tw`text-lg font-semibold mt-2`,
                                 { color: isCurrent ? '#fff' : 'rgba(255,255,255,0.9)' }
@@ -173,12 +152,12 @@ const ForecastList: React.FC<Props> = ({ data }) => {
                             ]}>
                                 {Math.round(item.feelslike_c)}°
                             </Text>
-                            <Text style={[
+                            {/* <Text style={[
                                 tw`text-xs mt-1`,
                                 { color: isCurrent ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)' }
                             ]}>
                                 {item.chance_of_rain}%
-                            </Text>
+                            </Text> */}
                             <Text style={[
                                 tw`text-xs mt-1`,
                                 { color: isCurrent ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)' }

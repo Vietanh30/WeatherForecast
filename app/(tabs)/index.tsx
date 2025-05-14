@@ -109,7 +109,7 @@ export default function HomeScreen() {
     }
   };
 
-  const CACHE_DURATION = 10 * 60 * 1000; // 5 phút
+  const CACHE_DURATION = 10; // 5 phút
 
   const fetchWeatherData = async (location: string) => {
     try {
@@ -485,6 +485,7 @@ export default function HomeScreen() {
           condition={weatherData.current.description}
           maxtemp_c={weatherData.weeklyForecast[0].temp_max}
           mintemp_c={weatherData.weeklyForecast[0].temp_min}
+          feelslike_c={weatherData.current.feelsLike}
           isMini={isExpanded}
         />
 
