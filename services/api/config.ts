@@ -4,7 +4,7 @@ import Constants from 'expo-constants';
 const extra = Constants.expoConfig?.extra || {};
 
 export const API_CONFIG = {
-    BASE_URL: 'http://192.168.1.54:8000/api',
+    BASE_URL: 'http://172.11.49.211:8000/api/weather',
     GEOAPIFY_URL: 'https://api.geoapify.com/v1',
     API_KEYS: {
         WEATHER: extra.WEATHERAPI_KEY || 'YOUR_WEATHER_API_KEY',
@@ -21,15 +21,18 @@ console.log('API Config:', {
 
 export const ENDPOINTS = {
     WEATHER: {
-        CURRENT: '/weather/current',
-        FORECAST: '/weather/forecast',
-        FORECAST_7DAYS: '/weather/forecast/7days',
-        FUTURE: '/weather/future',
-        MARINE: '/weather/marine',
-        ASTRONOMY: '/weather/astronomy',
-        TIMEZONE: '/weather/timezone',
-        ALERTS: '/weather/alerts',
-        AIR_QUALITY: '/weather/air-quality'
+        CURRENT: '/current',
+        FORECAST: '/forecast',
+        FORECAST_7DAYS: '/forecast/7days',
+        FUTURE: '/future',
+        MARINE: '/marine',
+        ASTRONOMY: '/astronomy',
+        TIMEZONE: '/timezone',
+        ALERTS: '/alerts',
+        AIR_QUALITY: '/air-quality',
+        NOTIFICATIONS: '/notifications',
+        NOTIFICATIONS_SUBSCRIBE: '/notifications/subscribe',
+        NOTIFICATIONS_UNSUBSCRIBE: '/notifications/unsubscribe'
     },
     CHAT: {
         SEND: '/chat',

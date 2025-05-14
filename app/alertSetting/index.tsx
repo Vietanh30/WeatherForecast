@@ -7,12 +7,15 @@ import { COLORS } from '../../constants/theme';
 import { useRouter } from 'expo-router';
 
 const alertOptions = [
-  'Không', 'Thỉnh thoảng', 'Bình thường', 'Nguy hiểm', 'Thiên tai'
+  { value: 'minor', label: 'Nhẹ' },
+  { value: 'moderate', label: 'Trung bình' },
+  { value: 'severe', label: 'Nghiêm trọng' },
+  { value: 'extreme', label: 'Cực kỳ nghiêm trọng' }
 ];
-const STORAGE_KEY = 'alert_setting';
+const STORAGE_KEY = 'alert_severity_setting';
 
 export default function AlertSettingScreen() {
-  const [selected, setSelected] = useState<string>('Không');
+  const [selected, setSelected] = useState<string>('moderate');
   const router = useRouter();
 
   // Load saved value on mount
@@ -23,7 +26,7 @@ export default function AlertSettingScreen() {
   const loadSavedSetting = async () => {
     try {
       const saved = await AsyncStorage.getItem(STORAGE_KEY);
-      if (saved && alertOptions.includes(saved)) {
+      if (saved && alertOptions.some(opt => opt.value === saved)) {
         setSelected(saved);
       }
     } catch (error) {
@@ -31,12 +34,27 @@ export default function AlertSettingScreen() {
     }
   };
 
-  const handleSelect = async (option: string) => {
+  const handleSelect = async (value: string) => {
     try {
-      setSelected(option);
-      await AsyncStorage.setItem(STORAGE_KEY, option);
+      setSelected(value);
+      await AsyncStorage.setItem(STORAGE_KEY, value);
     } catch (error) {
       console.error('Error saving alert setting:', error);
+    }
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'extreme':
+        return '#FF0000';
+      case 'severe':
+        return '#FF6B00';
+      case 'moderate':
+        return '#FFB800';
+      case 'minor':
+        return '#4CAF50';
+      default:
+        return COLORS.text.secondary;
     }
   };
 
@@ -49,7 +67,7 @@ export default function AlertSettingScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
-        <Text style={tw`text-white text-2xl font-bold flex-1 text-center`}>Cảnh báo</Text>
+        <Text style={tw`text-white text-2xl font-bold flex-1 text-center`}>Mức độ cảnh báo</Text>
       </View>
 
       <View style={tw`px-4`}>
@@ -64,7 +82,7 @@ export default function AlertSettingScreen() {
         >
           {alertOptions.map((opt, idx) => (
             <TouchableOpacity
-              key={opt}
+              key={opt.value}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -72,22 +90,32 @@ export default function AlertSettingScreen() {
                 paddingHorizontal: 18,
                 borderBottomWidth: idx < alertOptions.length - 1 ? 1 : 0,
                 borderBottomColor: 'rgba(255,255,255,0.08)',
-                backgroundColor: selected === opt ? 'rgba(255,255,255,0.05)' : 'transparent',
+                backgroundColor: selected === opt.value ? 'rgba(255,255,255,0.05)' : 'transparent',
               }}
-              onPress={() => handleSelect(opt)}
+              onPress={() => handleSelect(opt.value)}
               activeOpacity={0.7}
             >
-              <Text
-                style={{
-                  color: COLORS.text.primary,
-                  flex: 1,
-                  fontSize: 16,
-                  fontWeight: '500'
-                }}
-              >
-                {opt}
-              </Text>
-              {selected === opt && (
+              <View style={tw`flex-row items-center flex-1`}>
+                <View
+                  style={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: 6,
+                    backgroundColor: getSeverityColor(opt.value),
+                    marginRight: 12
+                  }}
+                />
+                <Text
+                  style={{
+                    color: COLORS.text.primary,
+                    fontSize: 16,
+                    fontWeight: '500'
+                  }}
+                >
+                  {opt.label}
+                </Text>
+              </View>
+              {selected === opt.value && (
                 <View style={tw`rounded-full p-1`}>
                   <Ionicons name="checkmark" size={20} color="white" />
                 </View>

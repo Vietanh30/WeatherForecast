@@ -15,6 +15,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
+import * as Device from 'expo-device';
+import * as SecureStore from 'expo-secure-store';
 
 const STORAGE_KEY = 'saved_locations';
 
@@ -26,6 +28,7 @@ export default function HomeScreen() {
   const [weatherData, setWeatherData] = useState<any>(null);
   const [savedLocations, setSavedLocations] = useState<any[]>([]);
   const [currentLocationIndex, setCurrentLocationIndex] = useState(0);
+  const [deviceId, setDeviceId] = useState<string>('');
   const bottomSheetRef = useRef<BottomSheet>(null);
   const router = useRouter();
 
@@ -33,6 +36,46 @@ export default function HomeScreen() {
   const snapPoints = useMemo(() => Platform.OS === 'android'
     ? ['45%', '83%']
     : ['45%', '83%'], []);
+
+  // Get or generate device ID
+  useEffect(() => {
+    const getOrCreateDeviceId = async () => {
+      try {
+        // Try to get existing device ID from secure storage
+        let storedId = await SecureStore.getItemAsync('device_id');
+
+        if (!storedId) {
+          // If no stored ID, generate a new one using device info
+          const deviceType = await Device.getDeviceTypeAsync();
+          const brand = Device.brand;
+          const modelName = Device.modelName;
+
+          // Create a unique ID using device info
+          storedId = `${brand}-${modelName}-${deviceType}-${Date.now()}`;
+
+          // Store the new ID securely
+          await SecureStore.setItemAsync('device_id', storedId);
+        }
+
+        setDeviceId(storedId);
+        console.log('Final Device ID:', storedId);
+        await AsyncStorage.setItem('device_id', storedId);
+      } catch (err) {
+        console.error('Error managing device ID:', err);
+      }
+    };
+
+    getOrCreateDeviceId();
+  }, []);
+
+  // Log stored device ID
+  useEffect(() => {
+    const logStoredId = async () => {
+      const id = await AsyncStorage.getItem('device_id');
+      console.log('Stored Device ID:', id);
+    };
+    logStoredId();
+  }, []);
 
   // Load saved locations
   useEffect(() => {

@@ -1,113 +1,194 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
+import { weatherApi, WeatherNotification } from '../../services/api/weatherApi';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Mock data for notifications
-const MOCK_NOTIFICATIONS = [
-    {
-        id: '1',
-        title: 'Cảnh báo thời tiết',
-        message: 'Dự báo mưa lớn tại Hà Nội trong 2 giờ tới',
-        time: '10 phút trước',
-        type: 'warning',
-        read: false
-    },
-    {
-        id: '2',
-        title: 'Cập nhật thời tiết',
-        message: 'Nhiệt độ tại TP.HCM đã tăng lên 35°C',
-        time: '30 phút trước',
-        type: 'info',
-        read: true
-    },
-    {
-        id: '3',
-        title: 'Thông báo mới',
-        message: 'Bạn có thể xem dự báo thời tiết 7 ngày tới',
-        time: '1 giờ trước',
-        type: 'info',
-        read: true
-    },
-    {
-        id: '4',
-        title: 'Cảnh báo bão',
-        message: 'Bão số 5 đang tiến gần đến vùng biển miền Trung',
-        time: '2 giờ trước',
-        type: 'warning',
-        read: false
-    }
-];
+const STORAGE_KEY = 'alert_severity_setting';
 
 export default function NotificationsScreen() {
     const router = useRouter();
-    const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+    const [notifications, setNotifications] = useState<WeatherNotification[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [selectedSeverity, setSelectedSeverity] = useState<string>('moderate');
 
-    const getNotificationIcon = (type: string) => {
-        switch (type) {
-            case 'warning':
-                return 'warning';
-            case 'info':
-                return 'information-circle';
-            default:
-                return 'notifications';
+    useEffect(() => {
+        loadAlertSetting();
+        fetchNotifications();
+    }, []);
+
+    const loadAlertSetting = async () => {
+        try {
+            const saved = await AsyncStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                setSelectedSeverity(saved);
+            }
+        } catch (error) {
+            console.error('Error loading alert setting:', error);
         }
     };
 
-    const handleNotificationPress = (notification: any) => {
-        // Mark as read
-        setNotifications(prev =>
-            prev.map(item =>
-                item.id === notification.id ? { ...item, read: true } : item
-            )
-        );
-        // Navigate to detail
+    const fetchNotifications = async () => {
+        try {
+            setLoading(true);
+            const currentCity = await AsyncStorage.getItem('current_city');
+            const latitude = await AsyncStorage.getItem('latitude');
+            const longitude = await AsyncStorage.getItem('longitude');
+
+            if (!currentCity && !latitude && !longitude) {
+                setError('Vui lòng chọn địa điểm để xem thông báo');
+                return;
+            }
+
+            const response = await weatherApi.getWeatherNotifications(
+                currentCity || undefined,
+                latitude ? parseFloat(latitude) : undefined,
+                longitude ? parseFloat(longitude) : undefined
+            );
+
+            // Lọc thông báo theo mức độ đã chọn
+            const severityLevels = ['minor', 'moderate', 'severe', 'extreme'];
+            const selectedIndex = severityLevels.indexOf(selectedSeverity);
+
+            const filteredAlerts = response.data.alerts.filter(alert => {
+                const alertIndex = severityLevels.indexOf(alert.severity.toLowerCase());
+                // Chỉ lấy các thông báo có mức độ từ mức đã chọn trở lên
+                return alertIndex >= selectedIndex;
+            });
+
+            // Sắp xếp thông báo theo mức độ nghiêm trọng (từ cao xuống thấp)
+            filteredAlerts.sort((a, b) => {
+                const aIndex = severityLevels.indexOf(a.severity.toLowerCase());
+                const bIndex = severityLevels.indexOf(b.severity.toLowerCase());
+                return bIndex - aIndex;
+            });
+
+            setNotifications(filteredAlerts);
+            setError(null);
+        } catch (err) {
+            console.error('Error fetching notifications:', err);
+            setError('Không thể tải thông báo');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleNotificationPress = (notification: WeatherNotification) => {
         router.push({
             pathname: '/(tabs)/notification-detail',
             params: { id: notification.id }
         });
     };
 
-    const renderNotification = ({ item }: { item: any }) => (
+    const getSeverityColor = (severity: string) => {
+        switch (severity.toLowerCase()) {
+            case 'extreme':
+                return '#FF0000';
+            case 'severe':
+                return '#FF6B00';
+            case 'moderate':
+                return '#FFB800';
+            case 'minor':
+                return '#4CAF50';
+            default:
+                return COLORS.text.secondary;
+        }
+    };
+
+    const getSeverityLabel = (severity: string) => {
+        switch (severity.toLowerCase()) {
+            case 'extreme':
+                return 'Cực kỳ nghiêm trọng';
+            case 'severe':
+                return 'Nghiêm trọng';
+            case 'moderate':
+                return 'Trung bình';
+            case 'minor':
+                return 'Nhẹ';
+            default:
+                return severity;
+        }
+    };
+
+    const renderNotification = ({ item }: { item: WeatherNotification }) => (
         <TouchableOpacity
-            style={[styles.notificationItem, !item.read && styles.unreadItem]}
+            style={[styles.notificationItem]}
             onPress={() => handleNotificationPress(item)}
         >
-            <View style={styles.iconContainer}>
+            <View style={[styles.iconContainer, { backgroundColor: getSeverityColor(item.severity) + '20' }]}>
                 <Ionicons
-                    name={getNotificationIcon(item.type)}
+                    name="notifications"
                     size={24}
-                    color={item.type === 'warning' ? COLORS.warning : COLORS.primary}
+                    color={getSeverityColor(item.severity)}
                 />
             </View>
             <View style={styles.contentContainer}>
                 <View style={styles.headerContainer}>
-                    <Text style={styles.title}>{item.title}</Text>
-                    <Text style={styles.time}>{item.time}</Text>
+                    <Text style={[styles.title, { color: getSeverityColor(item.severity) }]}>{item.title}</Text>
+
                 </View>
                 <Text style={styles.message} numberOfLines={2}>
-                    {item.message}
+                    {item.description}
+                </Text>
+                <Text style={styles.time}>
+                    {new Date(item.startTime).toLocaleString('vi-VN')}
                 </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.text.secondary} />
         </TouchableOpacity>
     );
 
+    if (loading) {
+        return (
+            <View style={styles.container}>
+                <View style={styles.header}>
+                    <Text style={styles.headerTitle}>Thông báo</Text>
+                </View>
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={COLORS.primary} />
+                </View>
+            </View>
+        );
+    }
+
+    if (error) {
+        return (
+            <View style={styles.container}>
+                <View style={styles.header}>
+                    <Text style={styles.headerTitle}>Thông báo</Text>
+                </View>
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>{error}</Text>
+                </View>
+            </View>
+        );
+    }
+
     return (
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Thông báo</Text>
-                <TouchableOpacity style={styles.clearButton}>
-                    <Text style={styles.clearButtonText}>Xóa tất cả</Text>
+                <TouchableOpacity
+                    style={styles.clearButton}
+                    onPress={fetchNotifications}
+                >
+                    <Ionicons name="refresh" size={24} color={COLORS.primary} />
                 </TouchableOpacity>
             </View>
             <FlatList
                 data={notifications}
                 renderItem={renderNotification}
-                keyExtractor={item => item.id}
+                keyExtractor={(item, index) => `notification-${item.id}-${index}`}
                 contentContainerStyle={styles.listContainer}
                 showsVerticalScrollIndicator={false}
+                ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>Không có thông báo nào</Text>
+                    </View>
+                }
             />
         </View>
     );
@@ -137,10 +218,6 @@ const styles = StyleSheet.create({
     clearButton: {
         padding: 8,
     },
-    clearButtonText: {
-        color: COLORS.primary,
-        fontSize: 14,
-    },
     listContainer: {
         padding: 16,
     },
@@ -148,21 +225,17 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: COLORS.secondary,
-        borderRadius: 12,
+        borderRadius: 10,
         padding: 16,
-        marginBottom: 12,
-    },
-    unreadItem: {
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        marginBottom: 10,
     },
     iconContainer: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.1)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 12,
+        marginRight: 10,
     },
     contentContainer: {
         flex: 1,
@@ -179,13 +252,42 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: COLORS.text.primary,
     },
-    time: {
-        fontSize: 12,
-        color: COLORS.text.secondary,
+    severity: {
+        fontSize: 10,
+        fontWeight: '600',
     },
     message: {
         fontSize: 14,
         color: COLORS.text.secondary,
         lineHeight: 20,
+    },
+    time: {
+        fontSize: 10,
+        color: COLORS.text.secondary,
+        marginTop: 4,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    errorText: {
+        color: COLORS.error,
+        fontSize: 16,
+        textAlign: 'center',
+    },
+    emptyContainer: {
+        padding: 20,
+        alignItems: 'center',
+    },
+    emptyText: {
+        color: COLORS.text.secondary,
+        fontSize: 16,
     },
 }); 

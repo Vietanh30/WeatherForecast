@@ -1,89 +1,125 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
+import { weatherApi } from '../../services/api/weatherApi';
 
-// Mock data for notifications (same as in notifications.tsx)
-const MOCK_NOTIFICATIONS = [
-    {
-        id: '1',
-        title: 'Cảnh báo thời tiết',
-        message: 'Dự báo mưa lớn tại Hà Nội trong 2 giờ tới. Lượng mưa dự kiến có thể lên đến 50mm. Người dân cần chú ý đề phòng ngập lụt và lũ quét tại các khu vực trũng thấp. Các hoạt động ngoài trời nên được hạn chế trong thời gian này.',
-        time: '10 phút trước',
-        type: 'warning',
-        read: false,
-        location: 'Hà Nội',
-        severity: 'Cao',
-        recommendations: [
-            'Hạn chế di chuyển ngoài trời',
-            'Chuẩn bị dụng cụ thoát nước',
-            'Theo dõi thông tin thời tiết'
-        ]
-    },
-    {
-        id: '2',
-        title: 'Cập nhật thời tiết',
-        message: 'Nhiệt độ tại TP.HCM đã tăng lên 35°C. Đây là mức nhiệt cao nhất trong ngày. Người dân cần chú ý uống đủ nước và hạn chế hoạt động ngoài trời trong khoảng thời gian từ 11h đến 15h.',
-        time: '30 phút trước',
-        type: 'info',
-        read: true,
-        location: 'TP.HCM',
-        severity: 'Trung bình',
-        recommendations: [
-            'Uống đủ nước',
-            'Hạn chế hoạt động ngoài trời',
-            'Sử dụng kem chống nắng'
-        ]
-    },
-    {
-        id: '3',
-        title: 'Thông báo mới',
-        message: 'Bạn có thể xem dự báo thời tiết 7 ngày tới với nhiều tính năng mới. Cập nhật ứng dụng để trải nghiệm các tính năng mới nhất.',
-        time: '1 giờ trước',
-        type: 'info',
-        read: true,
-        location: 'Toàn quốc',
-        severity: 'Thấp',
-        recommendations: [
-            'Cập nhật ứng dụng',
-            'Khám phá tính năng mới',
-            'Đánh giá ứng dụng'
-        ]
-    },
-    {
-        id: '4',
-        title: 'Cảnh báo bão',
-        message: 'Bão số 5 đang tiến gần đến vùng biển miền Trung. Sức gió mạnh nhất vùng gần tâm bão mạnh cấp 12-13, giật cấp 15. Các tỉnh từ Quảng Bình đến Quảng Ngãi cần chủ động phòng chống.',
-        time: '2 giờ trước',
-        type: 'warning',
-        read: false,
-        location: 'Miền Trung',
-        severity: 'Rất cao',
-        recommendations: [
-            'Di chuyển đến nơi an toàn',
-            'Chuẩn bị lương thực, nước uống',
-            'Theo dõi thông tin từ chính quyền'
-        ]
-    }
-];
+interface WeatherNotificationDetail {
+    id: string;
+    type: string;
+    severity: string;
+    title: string;
+    description: string;
+    area: string;
+    startTime: string;
+    endTime: string;
+    source: string;
+    instructions: string;
+    additional_info: {
+        risk_analysis: {
+            level: string;
+            description: string;
+        };
+        prevention_measures: string[];
+        affected_groups: string[];
+        high_risk_areas: string[];
+        impact_time: {
+            start: string;
+            peak: string;
+            end: string;
+        };
+        reliable_sources: string[];
+        emergency_contacts: string[];
+    };
+}
 
 export default function NotificationDetailScreen() {
     const router = useRouter();
     const { id } = useLocalSearchParams();
-    const [notification, setNotification] = useState<any>(null);
+    const [notification, setNotification] = useState<WeatherNotificationDetail | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const foundNotification = MOCK_NOTIFICATIONS.find(n => n.id === id);
-        if (foundNotification) {
-            setNotification(foundNotification);
+        const fetchNotificationDetail = async () => {
+            try {
+                setLoading(true);
+                const response = await weatherApi.getWeatherNotificationDetail(id as string);
+                if (response.message) {
+                    setNotification(response.data);
+                } else {
+                    setError('Không thể tải thông tin chi tiết');
+                }
+            } catch (err) {
+                console.error('Error fetching notification detail:', err);
+                setError('Đã xảy ra lỗi khi tải thông tin chi tiết');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (id) {
+            fetchNotificationDetail();
         }
     }, [id]);
 
-    if (!notification) {
+    const getSeverityColor = (severity: string) => {
+        switch (severity.toLowerCase()) {
+            case 'extreme':
+                return '#FF0000';
+            case 'severe':
+                return '#FF6B00';
+            case 'moderate':
+                return '#FFB800';
+            case 'minor':
+                return '#4CAF50';
+            default:
+                return COLORS.text.secondary;
+        }
+    };
+
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleString('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
+    if (loading) {
         return (
             <View style={styles.container}>
-                <Text style={styles.errorText}>Không tìm thấy thông báo</Text>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Chi tiết thông báo</Text>
+                    <View style={styles.backButton} />
+                </View>
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={COLORS.primary} />
+                </View>
+            </View>
+        );
+    }
+
+    if (error || !notification) {
+        return (
+            <View style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Chi tiết thông báo</Text>
+                    <View style={styles.backButton} />
+                </View>
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>{error || 'Không tìm thấy thông báo'}</Text>
+                </View>
             </View>
         );
     }
@@ -100,47 +136,113 @@ export default function NotificationDetailScreen() {
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                 <View style={styles.notificationHeader}>
-                    <View style={styles.iconContainer}>
+                    <View style={[styles.iconContainer, { backgroundColor: getSeverityColor(notification.severity) + '20' }]}>
                         <Ionicons
-                            name={notification.type === 'warning' ? 'warning' : 'information-circle'}
+                            name="warning"
                             size={32}
-                            color={notification.type === 'warning' ? COLORS.warning : COLORS.primary}
+                            color={getSeverityColor(notification.severity)}
                         />
                     </View>
                     <Text style={styles.title}>{notification.title}</Text>
-                    <Text style={styles.time}>{notification.time}</Text>
+                    <Text style={styles.time}>{formatDate(notification.startTime)}</Text>
                 </View>
 
                 <View style={styles.infoContainer}>
                     <View style={styles.infoRow}>
                         <Text style={styles.infoLabel}>Khu vực:</Text>
-                        <Text style={styles.infoValue}>{notification.location}</Text>
+                        <Text style={styles.infoValue}>{notification.area}</Text>
                     </View>
                     <View style={styles.infoRow}>
                         <Text style={styles.infoLabel}>Mức độ:</Text>
-                        <Text style={[
-                            styles.infoValue,
-                            { color: notification.severity === 'Rất cao' ? COLORS.warning : COLORS.text.primary }
-                        ]}>
+                        <Text style={[styles.infoValue, { color: getSeverityColor(notification.severity) }]}>
                             {notification.severity}
+                        </Text>
+                    </View>
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Nguồn:</Text>
+                        <Text style={styles.infoValue}>{notification.source}</Text>
+                    </View>
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Thời gian:</Text>
+                        <Text style={styles.infoValue}>
+                            {formatDate(notification.startTime)} - {formatDate(notification.endTime)}
                         </Text>
                     </View>
                 </View>
 
                 <View style={styles.messageContainer}>
-                    <Text style={styles.message}>{notification.message}</Text>
+                    <Text style={styles.message}>{notification.description}</Text>
                 </View>
 
-                {notification.recommendations && (
-                    <View style={styles.recommendationsContainer}>
-                        <Text style={styles.recommendationsTitle}>Khuyến nghị:</Text>
-                        {notification.recommendations.map((rec: string, index: number) => (
-                            <View key={index} style={styles.recommendationItem}>
-                                <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
-                                <Text style={styles.recommendationText}>{rec}</Text>
+                <View style={styles.instructionsContainer}>
+                    <Text style={styles.sectionTitle}>Hướng dẫn</Text>
+                    <Text style={styles.instructions}>{notification.instructions}</Text>
+                </View>
+
+                {notification.additional_info && (
+                    <>
+                        <View style={styles.riskContainer}>
+                            <Text style={styles.sectionTitle}>Phân tích rủi ro</Text>
+                            <Text style={styles.riskLevel}>Mức độ: {notification.additional_info.risk_analysis.level}</Text>
+                            <Text style={styles.riskDescription}>{notification.additional_info.risk_analysis.description}</Text>
+                        </View>
+
+                        <View style={styles.measuresContainer}>
+                            <Text style={styles.sectionTitle}>Biện pháp phòng tránh</Text>
+                            {notification.additional_info.prevention_measures.map((measure, index) => (
+                                <View key={index} style={styles.measureItem}>
+                                    <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
+                                    <Text style={styles.measureText}>{measure}</Text>
+                                </View>
+                            ))}
+                        </View>
+
+                        <View style={styles.groupsContainer}>
+                            <Text style={styles.sectionTitle}>Nhóm đối tượng bị ảnh hưởng</Text>
+                            {notification.additional_info.affected_groups.map((group, index) => (
+                                <View key={index} style={styles.groupItem}>
+                                    <Ionicons name="people" size={20} color={COLORS.primary} />
+                                    <Text style={styles.groupText}>{group}</Text>
+                                </View>
+                            ))}
+                        </View>
+
+                        <View style={styles.areasContainer}>
+                            <Text style={styles.sectionTitle}>Khu vực nguy hiểm</Text>
+                            {notification.additional_info.high_risk_areas.map((area, index) => (
+                                <View key={index} style={styles.areaItem}>
+                                    <Ionicons name="location" size={20} color={COLORS.warning} />
+                                    <Text style={styles.areaText}>{area}</Text>
+                                </View>
+                            ))}
+                        </View>
+
+                        <View style={styles.impactTimeContainer}>
+                            <Text style={styles.sectionTitle}>Thời gian ảnh hưởng</Text>
+                            <View style={styles.timeRow}>
+                                <Text style={styles.timeLabel}>Bắt đầu:</Text>
+                                <Text style={styles.timeValue}>{notification.additional_info.impact_time.start}</Text>
                             </View>
-                        ))}
-                    </View>
+                            <View style={styles.timeRow}>
+                                <Text style={styles.timeLabel}>Đỉnh điểm:</Text>
+                                <Text style={styles.timeValue}>{notification.additional_info.impact_time.peak}</Text>
+                            </View>
+                            <View style={styles.timeRow}>
+                                <Text style={styles.timeLabel}>Kết thúc:</Text>
+                                <Text style={styles.timeValue}>{notification.additional_info.impact_time.end}</Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.contactsContainer}>
+                            <Text style={styles.sectionTitle}>Liên hệ khẩn cấp</Text>
+                            {notification.additional_info.emergency_contacts.map((contact, index) => (
+                                <View key={index} style={styles.contactItem}>
+                                    <Ionicons name="call" size={20} color={COLORS.error} />
+                                    <Text style={styles.contactText}>{contact}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    </>
                 )}
             </ScrollView>
         </View>
@@ -176,6 +278,22 @@ const styles = StyleSheet.create({
         flex: 1,
         padding: 16,
     },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    errorText: {
+        color: COLORS.error,
+        fontSize: 16,
+        textAlign: 'center',
+    },
     notificationHeader: {
         alignItems: 'center',
         marginBottom: 24,
@@ -184,7 +302,6 @@ const styles = StyleSheet.create({
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: 'rgba(255,255,255,0.1)',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
@@ -234,32 +351,127 @@ const styles = StyleSheet.create({
         color: COLORS.text.primary,
         lineHeight: 24,
     },
-    recommendationsContainer: {
+    instructionsContainer: {
         backgroundColor: COLORS.secondary,
         borderRadius: 12,
         padding: 16,
+        marginBottom: 24,
     },
-    recommendationsTitle: {
+    sectionTitle: {
         fontSize: 18,
         fontWeight: '600',
         color: COLORS.text.primary,
         marginBottom: 16,
     },
-    recommendationItem: {
+    instructions: {
+        fontSize: 16,
+        color: COLORS.text.primary,
+        lineHeight: 24,
+    },
+    riskContainer: {
+        backgroundColor: COLORS.secondary,
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 24,
+    },
+    riskLevel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: COLORS.warning,
+        marginBottom: 8,
+    },
+    riskDescription: {
+        fontSize: 16,
+        color: COLORS.text.primary,
+        lineHeight: 24,
+    },
+    measuresContainer: {
+        backgroundColor: COLORS.secondary,
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 24,
+    },
+    measureItem: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 12,
     },
-    recommendationText: {
+    measureText: {
         fontSize: 16,
         color: COLORS.text.primary,
         marginLeft: 12,
         flex: 1,
     },
-    errorText: {
-        color: COLORS.text.primary,
+    groupsContainer: {
+        backgroundColor: COLORS.secondary,
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 24,
+    },
+    groupItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    groupText: {
         fontSize: 16,
-        textAlign: 'center',
-        marginTop: 32,
+        color: COLORS.text.primary,
+        marginLeft: 12,
+        flex: 1,
+    },
+    areasContainer: {
+        backgroundColor: COLORS.secondary,
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 24,
+    },
+    areaItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    areaText: {
+        fontSize: 16,
+        color: COLORS.text.primary,
+        marginLeft: 12,
+        flex: 1,
+    },
+    impactTimeContainer: {
+        backgroundColor: COLORS.secondary,
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 24,
+    },
+    timeRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    timeLabel: {
+        fontSize: 16,
+        color: COLORS.text.secondary,
+    },
+    timeValue: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: COLORS.text.primary,
+    },
+    contactsContainer: {
+        backgroundColor: COLORS.secondary,
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 24,
+    },
+    contactItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    contactText: {
+        fontSize: 16,
+        color: COLORS.text.primary,
+        marginLeft: 12,
+        flex: 1,
     },
 }); 

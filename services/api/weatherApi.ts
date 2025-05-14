@@ -270,6 +270,77 @@ export interface SevenDayForecastResponse {
     };
 }
 
+export interface WeatherNotification {
+    id: string;
+    type: string;
+    severity: string;
+    title: string;
+    description: string;
+    area: string;
+    startTime: string;
+    endTime: string;
+    source: string;
+    instructions: string;
+}
+
+export interface WeatherNotificationsResponse {
+    message: string;
+    data: {
+        alerts: WeatherNotification[];
+        total: number;
+        location: {
+            name: string;
+            country: string;
+        };
+    };
+}
+
+export interface NotificationSubscriptionResponse {
+    success: boolean;
+    message: string;
+    data?: {
+        deviceId: string;
+        location: string;
+        severity: string;
+        types: string[];
+    };
+    error?: string;
+}
+
+export interface WeatherNotificationDetail {
+    id: string;
+    type: string;
+    severity: string;
+    title: string;
+    description: string;
+    area: string;
+    startTime: string;
+    endTime: string;
+    source: string;
+    instructions: string;
+    additional_info: {
+        risk_analysis: {
+            level: string;
+            description: string;
+        };
+        prevention_measures: string[];
+        affected_groups: string[];
+        high_risk_areas: string[];
+        impact_time: {
+            start: string;
+            peak: string;
+            end: string;
+        };
+        reliable_sources: string[];
+        emergency_contacts: string[];
+    };
+}
+
+export interface WeatherNotificationDetailResponse {
+    message: string;
+    data: WeatherNotificationDetail;
+}
+
 export const weatherApi = {
     getCurrentWeather: async (location: string, lat?: number, lon?: number): Promise<WeatherResponse> => {
         try {
@@ -470,6 +541,119 @@ export const weatherApi = {
         } catch (error) {
             console.error('7-day forecast error details:', error);
             throw new Error('Failed to fetch 7-day forecast data');
+        }
+    },
+
+    getWeatherNotifications: async (
+        location?: string,
+        lat?: number,
+        lon?: number,
+        severity?: string,
+        type?: string,
+        area?: string
+    ): Promise<WeatherNotificationsResponse> => {
+        try {
+            let url = `${API_CONFIG.BASE_URL}${ENDPOINTS.WEATHER.NOTIFICATIONS}`;
+            const params = new URLSearchParams();
+
+            if (location) params.append('location', location);
+            if (lat) params.append('lat', lat.toString());
+            if (lon) params.append('lon', lon.toString());
+            if (severity) params.append('severity', severity);
+            if (type) params.append('type', type);
+            if (area) params.append('area', area);
+
+            url += `?${params.toString()}`;
+            console.log(url);
+
+            const response = await fetch(url, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            console.log(response);
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Weather notifications error response:', errorText);
+                throw new Error(`Failed to fetch weather notifications: ${response.status} ${errorText}`);
+            }
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Weather notifications error details:', error);
+            throw new Error('Failed to fetch weather notifications');
+        }
+    },
+
+    subscribeToNotifications: async (deviceId: string): Promise<NotificationSubscriptionResponse> => {
+        try {
+            const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.WEATHER.NOTIFICATIONS_SUBSCRIBE}`;
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ deviceId })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Subscribe error response:', errorText);
+                throw new Error(`Failed to subscribe to notifications: ${response.status} ${errorText}`);
+            }
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Subscribe error details:', error);
+            throw new Error('Failed to subscribe to notifications');
+        }
+    },
+
+    unsubscribeFromNotifications: async (deviceId: string): Promise<NotificationSubscriptionResponse> => {
+        try {
+            const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.WEATHER.NOTIFICATIONS_UNSUBSCRIBE}`;
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ deviceId })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Unsubscribe error response:', errorText);
+                throw new Error(`Failed to unsubscribe from notifications: ${response.status} ${errorText}`);
+            }
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Unsubscribe error details:', error);
+            throw new Error('Failed to unsubscribe from notifications');
+        }
+    },
+
+    getWeatherNotificationDetail: async (id: string): Promise<WeatherNotificationDetailResponse> => {
+        try {
+            const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.WEATHER.NOTIFICATIONS}/${id}`;
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Weather notification detail error response:', errorText);
+                throw new Error(`Failed to fetch weather notification detail: ${response.status} ${errorText}`);
+            }
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Weather notification detail error details:', error);
+            throw new Error('Failed to fetch weather notification detail');
         }
     }
 };
