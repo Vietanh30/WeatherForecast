@@ -273,8 +273,8 @@ export interface SevenDayForecastResponse {
 export const weatherApi = {
     getCurrentWeather: async (location: string, lat?: number, lon?: number): Promise<WeatherResponse> => {
         try {
-            const locationParam = lat && lon ? `${lat},${lon}` : location;
-            const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.WEATHER.CURRENT}?location=${encodeURIComponent(locationParam)}&aqi=yes&lang=vi`;
+            const locationParam = `lat=${lat}&lon=${lon}`;
+            const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.WEATHER.CURRENT}?${locationParam}&aqi=yes&lang=vi`;
 
             // console.log('Fetching current weather from URL:', url);
 
@@ -433,8 +433,8 @@ export const weatherApi = {
 
     getAirQuality: async (location: string, lat?: number, lon?: number): Promise<AirQualityResponse> => {
         try {
-            const locationParam = lat && lon ? `lat=${lat}&lon=${lon}` : `location=${encodeURIComponent(location)}`;
-            const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.WEATHER.AIR_QUALITY}?${locationParam}&lang=vi`;
+            const locationParam = lat && lon ? `${lat},${lon}` : location;
+            const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.WEATHER.AIR_QUALITY}?location=${encodeURIComponent(locationParam)}&lang=vi`;
 
             const response = await fetch(url);
 
@@ -454,9 +454,9 @@ export const weatherApi = {
 
     getSevenDayForecast: async (location: string, lat?: number, lon?: number): Promise<SevenDayForecastResponse> => {
         try {
-            const locationParam = lat && lon ? `lat=${lat}&lon=${lon}` : `location=${encodeURIComponent(location)}`;
+            const locationParam = `lat=${lat}&lon=${lon}`;
             const url = `${API_CONFIG.BASE_URL}${ENDPOINTS.WEATHER.FORECAST_7DAYS}?${locationParam}&lang=vi`;
-            console.log("url", url)
+            console
             const response = await fetch(url);
 
             if (!response.ok) {

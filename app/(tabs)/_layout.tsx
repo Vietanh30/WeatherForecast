@@ -82,6 +82,14 @@ export default function TabLayout() {
         }}
 
       />
+      <Tabs.Screen
+        name="chatbox"
+        options={{
+          tabBarStyle: { display: 'none' },
+          href: null,
+        }}
+
+      />
     </Tabs>
   );
 }

@@ -9,6 +9,7 @@ import WeeklyForecastList from '../components/WeeklyForecastList';
 import FeatureCardsGrid from '../../components/FeatureCardsGrid';
 import { COLORS } from '../../constants/theme';
 import WeeklyCharts from '../components/WeeklyCharts';
+import HourlyCharts from '../components/HourlyCharts';
 import { weatherApi } from '../../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -129,8 +130,16 @@ export default function HomeScreen() {
         }
       }
 
-      // First get current weather to get coordinates
-      const currentWeather = await weatherApi.getCurrentWeather(location);
+      // Lấy tọa độ từ AsyncStorage hoặc dùng mặc định là Hà Nội
+      const latitude = await AsyncStorage.getItem('latitude') || '21.0285';
+      const longitude = await AsyncStorage.getItem('longitude') || '105.8542';
+
+      // First get current weather using coordinates
+      const currentWeather = await weatherApi.getCurrentWeather(
+        'Hà Nội', // location name as fallback
+        parseFloat(latitude),
+        parseFloat(longitude)
+      );
       const currentWeatherData = currentWeather.data;
       if (!currentWeatherData || !currentWeatherData.current || !currentWeatherData.location) {
         throw new Error('Invalid current weather data received');
@@ -138,10 +147,19 @@ export default function HomeScreen() {
 
       // Then get forecast and astronomy using coordinates
       const [forecast, weeklyForecast, astronomy] = await Promise.all([
-        weatherApi.getForecast(location, 1, currentWeatherData.location.lat, currentWeatherData.location.lon),
-        weatherApi.getSevenDayForecast(location, parseFloat(await AsyncStorage.getItem('latitude') || '0'), parseFloat(await AsyncStorage.getItem('longitude') || '0')),
+        weatherApi.getForecast(
+          'Hà Nội',
+          1,
+          currentWeatherData.location.lat,
+          currentWeatherData.location.lon
+        ),
+        weatherApi.getSevenDayForecast(
+          'Hà Nội',
+          currentWeatherData.location.lat,
+          currentWeatherData.location.lon
+        ),
         weatherApi.getAstronomy(
-          location,
+          'Hà Nội',
           new Date().toISOString().split('T')[0],
           currentWeatherData.location.lat,
           currentWeatherData.location.lon
@@ -182,6 +200,7 @@ export default function HomeScreen() {
           temperature: currentWeatherData.current.temp_c,
           feelsLike: currentWeatherData.current.feelslike_c,
           description: currentWeatherData.current.condition?.text || 'Unknown',
+          conditionCode: currentWeatherData.current.condition?.code || '1000',
           humidity: currentWeatherData.current.humidity,
           windSpeed: currentWeatherData.current.wind_kph,
           windDir: currentWeatherData.current.wind_dir,
@@ -340,10 +359,69 @@ export default function HomeScreen() {
     { label: 'Chiếu sáng trăng', value: weatherData?.astronomy?.moon_illumination ? `${weatherData.astronomy.moon_illumination}%` : 'N/A', icon: 'brightness-5', color: '#a78bfa' },
   ];
 
+  const getWeatherBackground = (conditionCode: string | number) => {
+    // Map weather conditions to background images
+    const weatherBackgrounds: { [key: string]: string } = {
+      // Clear sky
+      '1000': 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80', // Clear
+
+      // Partly cloudy
+      '1003': 'https://images.unsplash.com/photo-1476820865390-c52aeebb9891?auto=format&fit=crop&w=800&q=80', // Partly cloudy
+
+      // Cloudy
+      '1006': 'https://images.unsplash.com/photo-1501630834273-4b5604d2ee31?auto=format&fit=crop&w=800&q=80', // Cloudy
+      '1009': 'https://images.unsplash.com/photo-1501630834273-4b5604d2ee31?auto=format&fit=crop&w=800&q=80', // Overcast
+
+      // Rain
+      '1063': 'https://images.unsplash.com/photo-1501691223387-dd05029ec4a6?auto=format&fit=crop&w=800&q=80', // Patchy rain
+      '1180': 'https://images.unsplash.com/photo-1501691223387-dd05029ec4a6?auto=format&fit=crop&w=800&q=80', // Light rain
+      '1186': 'https://images.unsplash.com/photo-1501691223387-dd05029ec4a6?auto=format&fit=crop&w=800&q=80', // Moderate rain
+      '1189': 'https://images.unsplash.com/photo-1501691223387-dd05029ec4a6?auto=format&fit=crop&w=800&q=80', // Heavy rain
+      '1192': 'https://images.unsplash.com/photo-1501691223387-dd05029ec4a6?auto=format&fit=crop&w=800&q=80', // Very heavy rain
+      '1195': 'https://images.unsplash.com/photo-1501691223387-dd05029ec4a6?auto=format&fit=crop&w=800&q=80', // Extreme rain
+
+      // Snow
+      '1066': 'https://images.unsplash.com/photo-1418985991508-e47386d96a71?auto=format&fit=crop&w=800&q=80', // Patchy snow
+      '1210': 'https://images.unsplash.com/photo-1418985991508-e47386d96a71?auto=format&fit=crop&w=800&q=80', // Light snow
+      '1213': 'https://images.unsplash.com/photo-1418985991508-e47386d96a71?auto=format&fit=crop&w=800&q=80', // Moderate snow
+      '1216': 'https://images.unsplash.com/photo-1418985991508-e47386d96a71?auto=format&fit=crop&w=800&q=80', // Heavy snow
+      '1219': 'https://images.unsplash.com/photo-1418985991508-e47386d96a71?auto=format&fit=crop&w=800&q=80', // Very heavy snow
+
+      // Thunder
+      '1087': 'https://images.unsplash.com/photo-1501426026826-31c667bdf23d?auto=format&fit=crop&w=800&q=80', // Thunder
+      '1273': 'https://images.unsplash.com/photo-1501426026826-31c667bdf23d?auto=format&fit=crop&w=800&q=80', // Patchy light rain with thunder
+      '1276': 'https://images.unsplash.com/photo-1501426026826-31c667bdf23d?auto=format&fit=crop&w=800&q=80', // Moderate or heavy rain with thunder
+
+      // Fog
+      '1030': 'https://images.unsplash.com/photo-1504608524841-42fe6f032b4b?auto=format&fit=crop&w=800&q=80', // Mist
+      '1135': 'https://images.unsplash.com/photo-1504608524841-42fe6f032b4b?auto=format&fit=crop&w=800&q=80', // Fog
+      '1147': 'https://images.unsplash.com/photo-1504608524841-42fe6f032b4b?auto=format&fit=crop&w=800&q=80', // Freezing fog
+    };
+
+    // Convert condition code to string and ensure it exists in our mapping
+    const code = conditionCode?.toString() || '1000';
+    return weatherBackgrounds[code] || weatherBackgrounds['1000'];
+  };
+
+  const getIconColor = (conditionCode: string | number) => {
+    const codeStr = conditionCode.toString();
+    // Dark conditions (rain, thunder, snow, fog) - use light icons
+    if (['1063', '1180', '1186', '1189', '1192', '1195', // Rain
+      '1066', '1210', '1213', '1216', '1219', // Snow
+      '1087', '1273', '1276', // Thunder
+      '1030', '1135', '1147', // Fog
+      '1006', '1009' // Cloudy
+    ].includes(codeStr)) {
+      return '#000000';
+    }
+    // Light conditions (clear, partly cloudy) - use dark icons
+    return '#1a1a1a';
+  };
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ImageBackground
-        source={{ uri: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80' }}
+        source={{ uri: getWeatherBackground(weatherData?.current?.conditionCode) }}
         style={{ flex: 1 }}
         resizeMode="cover"
       >
@@ -357,24 +435,46 @@ export default function HomeScreen() {
               paddingTop: 40,
               paddingBottom: 8
             }}>
-              {savedLocations.length > 0 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                {savedLocations.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      const nextIndex = (currentLocationIndex + 1) % savedLocations.length;
+                      setCurrentLocationIndex(nextIndex);
+                      handleLocationChange(savedLocations[nextIndex]);
+                    }}
+                    style={{ padding: 8, marginRight: 8 }}
+                  >
+                    <Ionicons
+                      name="swap-horizontal"
+                      size={24}
+                      color={getIconColor(weatherData?.current?.conditionCode)}
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <TouchableOpacity
-                  onPress={() => {
-                    const nextIndex = (currentLocationIndex + 1) % savedLocations.length;
-                    setCurrentLocationIndex(nextIndex);
-                    handleLocationChange(savedLocations[nextIndex]);
-                  }}
+                  onPress={() => router.push('/chatbox')}
+                  style={{ padding: 8, marginRight: 8 }}
+                >
+                  <Ionicons
+                    name="chatbubble-ellipses"
+                    size={24}
+                    color={getIconColor(weatherData?.current?.conditionCode)}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => router.push('/searchLocation')}
                   style={{ padding: 8 }}
                 >
-                  <Ionicons name="swap-horizontal" size={24} color="white" />
+                  <Ionicons
+                    name="add-circle-outline"
+                    size={24}
+                    color={getIconColor(weatherData?.current?.conditionCode)}
+                  />
                 </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                onPress={() => router.push('/searchLocation')}
-                style={{ padding: 8 }}
-              >
-                <Ionicons name="add-circle-outline" size={24} color="white" />
-              </TouchableOpacity>
+              </View>
             </View>
           </>
         )}
@@ -423,9 +523,14 @@ export default function HomeScreen() {
               <>
                 <ForecastList data={weatherData.hourlyForecast} />
                 {isExpanded && (
-                  <View style={{ marginTop: 16 }}>
-                    <FeatureCardsGrid data={featureCards} />
-                  </View>
+                  <>
+                    <View style={{ marginTop: 16 }}>
+                      <FeatureCardsGrid data={featureCards} />
+                    </View>
+                    <View style={{ marginTop: 16 }}>
+                      <HourlyCharts data={weatherData.hourlyForecast} />
+                    </View>
+                  </>
                 )}
               </>
             ) : (

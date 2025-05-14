@@ -1,17 +1,18 @@
 export const COLORS = {
-    primary: '#48319D',
-    primaryLight: 'rgba(72, 49, 157, 0.95)',
-    secondary: '#3A3A6A',
-    background: '#48319D',
-    card: 'rgba(255,255,255,0.08)',
-    backgroundCard: 'rgba(255,255,255,0.1)',
+    primary: '#4A90E2',
+    primaryLight: '#6BA5E7',
+    secondary: '#1E1E2E',
+    background: '#101223',
+    card: '#23243A',
+    backgroundCard: '#1A1B2E',
     text: {
         primary: '#FFFFFF',
-        secondary: 'rgba(255,255,255,0.7)',
+        secondary: '#888888',
     },
     border: 'rgba(255,255,255,0.1)',
     icon: {
         primary: '#FFFFFF',
-        secondary: 'rgba(255,255,255,0.6)',
-    }
+        secondary: '#888888',
+    },
+    warning: '#FFA500',
 }; 

@@ -2,28 +2,32 @@ import { API_CONFIG } from './config';
 
 export interface ChatMessage {
     id: string;
-    content: string;
-    role: 'user' | 'assistant';
+    question: string;
+    answer: string;
+    weatherData?: any;
+    sessionId: string;
     timestamp: string;
 }
 
 export interface ChatResponse {
-    message: ChatMessage;
+    message: string;
+    data: ChatMessage;
 }
 
 export interface ChatHistoryResponse {
-    messages: ChatMessage[];
+    message: string;
+    data: ChatMessage[];
 }
 
 export const chatApi = {
-    handleChat: async (message: string): Promise<ChatResponse> => {
+    handleChat: async (question: string, city?: string, sessionId?: string): Promise<ChatResponse> => {
         try {
             const response = await fetch(`${API_CONFIG.BASE_URL}/chat`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ message }),
+                body: JSON.stringify({ question, city, sessionId }),
             });
             if (!response.ok) {
                 throw new Error('Chat API request failed');
@@ -34,9 +38,9 @@ export const chatApi = {
         }
     },
 
-    getChatHistory: async (): Promise<ChatHistoryResponse> => {
+    getChatHistory: async (sessionId: string): Promise<ChatHistoryResponse> => {
         try {
-            const response = await fetch(`${API_CONFIG.BASE_URL}/chat/history`);
+            const response = await fetch(`${API_CONFIG.BASE_URL}/chat/history?sessionId=${sessionId}`);
             if (!response.ok) {
                 throw new Error('Chat history API request failed');
             }

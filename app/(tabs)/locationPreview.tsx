@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { COLORS } from '../../constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { weatherApi } from '../../services/api';
 
 const STORAGE_KEY = 'saved_locations';
 
@@ -21,24 +22,142 @@ export default function LocationPreviewScreen() {
     const fetchWeatherData = async () => {
         try {
             setLoading(true);
-            // Gọi API thời tiết ở đây
-            // Tạm thời dùng dữ liệu mẫu
-            setWeatherData({
-                current: {
-                    temp: 28,
-                    feels_like: 30,
-                    humidity: 75,
-                    wind_speed: 5,
-                    weather: [{ main: 'Clouds', description: 'nhiều mây' }]
+            const lat = params.lat?.toString() || '21.0285';
+            const lon = params.lon?.toString() || '105.8542';
+            const locationName = params.display_name?.toString().split(',')[0] || 'Hà Nội';
+
+            // Get current weather
+            const currentWeather = await weatherApi.getCurrentWeather(
+                locationName,
+                parseFloat(lat),
+                parseFloat(lon)
+            );
+            const currentWeatherData = currentWeather.data;
+            if (!currentWeatherData || !currentWeatherData.current || !currentWeatherData.location) {
+                throw new Error('Invalid current weather data received');
+            }
+
+            // Get forecast and astronomy
+            const [forecast, weeklyForecast, astronomy] = await Promise.all([
+                weatherApi.getForecast(
+                    locationName,
+                    1,
+                    currentWeatherData.location.lat,
+                    currentWeatherData.location.lon
+                ),
+                weatherApi.getSevenDayForecast(
+                    locationName,
+                    currentWeatherData.location.lat,
+                    currentWeatherData.location.lon
+                ),
+                weatherApi.getAstronomy(
+                    locationName,
+                    new Date().toISOString().split('T')[0],
+                    currentWeatherData.location.lat,
+                    currentWeatherData.location.lon
+                )
+            ]);
+
+            const forecastData = forecast.data;
+            const weeklyForecastData = weeklyForecast.data;
+            const astronomyData = astronomy.data;
+
+            if (!forecastData || !forecastData.forecast || !forecastData.forecast.forecastday) {
+                throw new Error('Invalid forecast data received');
+            }
+
+            if (!weeklyForecastData || !weeklyForecastData.forecast) {
+                throw new Error('Invalid weekly forecast data received');
+            }
+
+            if (!astronomyData || !astronomyData.astronomy) {
+                throw new Error('Invalid astronomy data received');
+            }
+
+            // Transform data to match backend schema
+            const transformedData = {
+                location: {
+                    name: locationName,
+                    latitude: currentWeatherData.location.lat,
+                    longitude: currentWeatherData.location.lon
                 },
-                daily: [
-                    { temp: { day: 28, night: 24 }, weather: [{ main: 'Clouds' }] },
-                    { temp: { day: 29, night: 25 }, weather: [{ main: 'Clear' }] },
-                    { temp: { day: 27, night: 23 }, weather: [{ main: 'Rain' }] }
-                ]
-            });
+                current: {
+                    city: locationName,
+                    latitude: currentWeatherData.location.lat,
+                    longitude: currentWeatherData.location.lon,
+                    temperature: currentWeatherData.current.temp_c,
+                    feelsLike: currentWeatherData.current.feelslike_c,
+                    description: currentWeatherData.current.condition?.text || 'Unknown',
+                    humidity: currentWeatherData.current.humidity,
+                    windSpeed: currentWeatherData.current.wind_kph,
+                    windDir: currentWeatherData.current.wind_dir,
+                    uvIndex: currentWeatherData.current.uv,
+                    rain_mm: currentWeatherData.current.precip_mm,
+                    pressure_mb: currentWeatherData.current.pressure_mb,
+                    visibility_km: currentWeatherData.current.vis_km,
+                    time: new Date(currentWeatherData.current.last_updated_epoch * 1000),
+                    source: 'current'
+                },
+                astronomy: {
+                    city: locationName,
+                    latitude: currentWeatherData.location.lat,
+                    longitude: currentWeatherData.location.lon,
+                    date: new Date(currentWeatherData.location.localtime_epoch * 1000),
+                    sunrise: astronomyData.astronomy.astro.sunrise,
+                    sunset: astronomyData.astronomy.astro.sunset,
+                    moonrise: astronomyData.astronomy.astro.moonrise,
+                    moonset: astronomyData.astronomy.astro.moonset,
+                    moon_phase: astronomyData.astronomy.astro.moon_phase,
+                    moon_illumination: astronomyData.astronomy.astro.moon_illumination,
+                    is_moon_up: astronomyData.astronomy.astro.is_moon_up,
+                    is_sun_up: astronomyData.astronomy.astro.is_sun_up
+                },
+                hourlyForecast: forecastData.forecast.forecastday[0].hour.map((hour: any) => ({
+                    time: new Date(hour.time_epoch * 1000),
+                    temp_c: hour.temp_c,
+                    condition: {
+                        text: hour.condition?.text || 'Unknown',
+                        icon: hour.condition?.icon || '',
+                        code: hour.condition?.code || 0
+                    },
+                    wind_kph: hour.wind_kph || 0,
+                    humidity: hour.humidity || 0,
+                    feelslike_c: hour.feelslike_c || 0,
+                    chance_of_rain: hour.chance_of_rain || 0,
+                    chance_of_snow: hour.chance_of_snow || 0,
+                    air_quality: hour.air_quality || {}
+                })),
+                weeklyForecast: weeklyForecastData.forecast.map((day: any) => ({
+                    date: new Date(day.dt * 1000),
+                    temp: day.main.temp,
+                    feels_like: day.main.feels_like,
+                    temp_min: day.main.temp_min,
+                    temp_max: day.main.temp_max,
+                    humidity: day.main.humidity,
+                    condition: {
+                        text: day.weather[0].description,
+                        icon: day.weather[0].icon || '',
+                        code: day.weather[0].id || 0
+                    },
+                    wind_kph: day.wind.speed,
+                    wind_dir: day.wind.deg,
+                    chance_of_rain: day.pop,
+                    clouds: day.clouds.all,
+                    visibility: day.visibility
+                }))
+            };
+
+            setWeatherData(transformedData);
+            setError(null);
         } catch (err) {
-            setError('Không thể tải dữ liệu thời tiết');
+            console.error('Error fetching weather data:', err);
+            if (err instanceof Error) {
+                console.error('Error details:', {
+                    message: err.message,
+                    stack: err.stack
+                });
+            }
+            setError(err instanceof Error ? err.message : 'Không thể tải dữ liệu thời tiết');
         } finally {
             setLoading(false);
         }
@@ -66,7 +185,7 @@ export default function LocationPreviewScreen() {
 
     if (loading) {
         return (
-            <View style={styles.container}>
+            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
             </View>
         );
@@ -101,10 +220,10 @@ export default function LocationPreviewScreen() {
                 {/* Current Weather */}
                 <View style={styles.weatherCard}>
                     <Text style={styles.temperature}>
-                        {weatherData?.current.temp}°
+                        {Math.round(weatherData?.current.temperature)}°
                     </Text>
                     <Text style={styles.weatherDescription}>
-                        {weatherData?.current.weather[0].description}
+                        {weatherData?.current.description}
                     </Text>
                     <View style={styles.weatherDetails}>
                         <View style={styles.weatherDetail}>
@@ -112,12 +231,12 @@ export default function LocationPreviewScreen() {
                             <Text style={styles.detailText}>{weatherData?.current.humidity}%</Text>
                         </View>
                         <View style={styles.weatherDetail}>
-                            <Ionicons name="speedometer-outline" size={24} color="#888" />
-                            <Text style={styles.detailText}>{weatherData?.current.feels_like}°</Text>
+                            <Ionicons name="thermometer-outline" size={24} color="#888" />
+                            <Text style={styles.detailText}>{Math.round(weatherData?.current.feelsLike)}°</Text>
                         </View>
                         <View style={styles.weatherDetail}>
-                            <Ionicons name="airplane-outline" size={24} color="#888" />
-                            <Text style={styles.detailText}>{weatherData?.current.wind_speed}m/s</Text>
+                            <Ionicons name="speedometer-outline" size={24} color="#888" />
+                            <Text style={styles.detailText}>{Math.round(weatherData?.current.windSpeed)} km/h</Text>
                         </View>
                     </View>
                 </View>
@@ -127,12 +246,12 @@ export default function LocationPreviewScreen() {
                     <Text style={styles.forecastTitle}>
                         Dự báo 3 ngày
                     </Text>
-                    {weatherData?.daily.map((day: any, index: number) => (
+                    {weatherData?.weeklyForecast.slice(0, 3).map((day: any, index: number) => (
                         <View key={index} style={styles.forecastItem}>
                             <Text style={styles.forecastDay}>Ngày {index + 1}</Text>
-                            <Text style={styles.forecastWeather}>{day.weather[0].main}</Text>
-                            <Text style={styles.forecastTemp}>{day.temp.day}°</Text>
-                            <Text style={styles.forecastTempNight}>{day.temp.night}°</Text>
+                            <Text style={styles.forecastWeather}>{day.condition.text}</Text>
+                            <Text style={styles.forecastTemp}>{Math.round(day.temp_max)}°</Text>
+                            <Text style={styles.forecastTempNight}>{Math.round(day.temp_min)}°</Text>
                         </View>
                     ))}
                 </View>
